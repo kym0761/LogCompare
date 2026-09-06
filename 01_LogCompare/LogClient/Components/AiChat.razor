@@ -1,0 +1,240 @@
+@using System.Text
+@using System.Text.Json
+@inject IJSRuntime JS
+@implements IDisposable
+@inject HttpClient Http
+
+<!-- 안 쓰는 컴포넌트라서 리팩토링을 하지 않았음... -->
+
+<div class="ai-sidebar">
+    @* 헤더 영역 *@
+    <div class="sidebar-header">
+        <div class="ai-status">
+            <span class="status-dot @(IsLoading ? "pulse" : "")"></span>
+            <span class="ai-name">@LLM_Model Assistant</span>
+        </div>
+        <button class="clear-btn" @onclick="ClearChat">새 대화</button>
+    </div>
+
+    @* 채팅 이력 출력 영역 *@
+    <div class="chat-history scroll-styled" id="chatContainer">
+        @if (Messages.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-robot"></i>
+                <p>비교 중인 로그에 대해 궁금한 점을 물어보세요.</p>
+                <small>예: "두 로그의 주요 차이점 3가지만 요약해줘"</small>
+            </div>
+        }
+        else
+        {
+            @foreach (var msg in Messages)
+            {
+                <div class="message-bubble @msg.Role.ToLower()">
+                    <div class="bubble-header">@(msg.Role == "User" ? "나" : "AI 분석가")</div>
+                    <div class="bubble-content">
+                        @* [추가됨] 과거에 보냈던 이미지들도 말풍선 안에 예쁘게 렌더링합니다 *@
+                        @if (msg.Images?.Any() == true)
+                        {
+                            <div class="msg-images" style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                @foreach (var img in msg.Images)
+                                {
+                                    <img src="data:image/png;base64,@img" style="max-width: 150px; border-radius: 4px; border: 1px solid var(--border-color);" />
+                                }
+                            </div>
+                        }
+
+                        @if (msg.Role == "Assistant")
+                        {
+                            <div class="formatted-text">@msg.Content</div>
+                        }
+                        else
+                        {
+                            @msg.Content
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    @* [추가됨] 전송 대기 중인 이미지 미리보기 바 *@
+    @if (AttachedImages.Any())
+    {
+        <div class="image-preview-bar" style="display: flex; gap: 8px; padding: 10px 15px; background: var(--bg-card); border-top: 1px solid var(--border-color); overflow-x: auto;">
+            @foreach (var img in AttachedImages)
+            {
+                <div class="preview-item" style="position: relative; width: 60px; height: 60px; flex-shrink: 0;">
+                    <img src="data:image/png;base64,@img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid var(--border-color);" />
+                    <button class="remove-img-btn" @onclick="() => RemoveImage(img)" style="position: absolute; top: -5px; right: -5px; background: #f85149; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer;">×</button>
+                </div>
+            }
+        </div>
+    }
+
+    @* 입력 영역 *@
+    <div class="chat-input-section">
+        <div class="input-wrapper">
+            @* [수정됨] 존재하지 않는 @onpaste="HandlePaste" 삭제. JS가 알아서 처리합니다. *@
+            <textarea class="ai-textarea"
+                      id="aiInput"
+                      @bind="UserInput"
+                      @bind:event="oninput"
+                      @onkeydown="HandleKeyDown"
+                      placeholder="질문을 입력하세요. (Ctrl+Enter 전송) / 이미지 붙여넣기도 가능"
+                      disabled="@IsLoading"></textarea>
+
+            <div class="input-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <InputFile OnChange="HandleFileSelected" id="fileInput" style="display:none" multiple />
+                <label for="fileInput" class="icon-btn">📎</label>
+                <button class="send-btn" @onclick="AskLLM" disabled="@IsLoading" style="padding: 8px 16px; background: #238636; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+                    @(IsLoading ? "분석 중..." : "전송")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string LogContext { get; set; } = "";
+
+    private List<ChatMessage> Messages = new();
+    private string UserInput = "";
+    private bool IsLoading = false;
+    private List<string> AttachedImages = new();
+    private DotNetObjectReference<AiChat>? _objRef;
+
+    private string LLM_Model = "gemma4:e4b";
+
+    public class ChatMessage
+    {
+        public string Role { get; set; } = "";
+        public string Content { get; set; } = "";
+        public List<string>? Images { get; set; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("chatHelpers.initPasteHandler", "aiInput", _objRef);
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && e.CtrlKey) await AskLLM();
+    }
+
+    private void ClearChat() => Messages.Clear();
+
+    private async Task AskLLM()
+    {
+        if ((string.IsNullOrWhiteSpace(UserInput) && !AttachedImages.Any()) || IsLoading) return;
+
+        var userText = UserInput;
+        var currentImages = AttachedImages.ToList();
+
+        Messages.Add(new ChatMessage
+        {
+            Role = "User",
+            Content = userText,
+            Images = currentImages
+        });
+
+        UserInput = "";
+        AttachedImages.Clear();
+        IsLoading = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(50);
+        await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chatContainer");
+
+        try
+        {
+            var payload = new
+            {
+                model = LLM_Model, // 환경에 맞는 모델 태그 적용
+                messages = ConstructPayload(userText, currentImages),
+                stream = false
+            };
+
+            var response = await Http.PostAsJsonAsync("http://localhost:11434/api/chat", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                var botReply = doc.RootElement.GetProperty("message").GetProperty("content").GetString();
+
+                Messages.Add(new ChatMessage { Role = "Assistant", Content = botReply });
+            }
+            else
+            {
+                Messages.Add(new ChatMessage { Role = "Assistant", Content = "Ollama 연결 실패. 모델 상태를 확인하세요." });
+            }
+        }
+        catch (Exception ex)
+        {
+            Messages.Add(new ChatMessage { Role = "Assistant", Content = $"에러 발생: {ex.Message}" });
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+            await JS.InvokeVoidAsync("chatHelpers.scrollToBottom", "chatContainer");
+        }
+    }
+
+    private List<object> ConstructPayload(string currentText, List<string> currentImages)
+    {
+        var chatList = new List<object>();
+
+        if (!string.IsNullOrEmpty(LogContext))
+        {
+            chatList.Add(new { role = "system", content = $"너는 로그 분석 전문가야. 아래 로그를 참고해:\n{LogContext}" });
+        }
+
+        foreach (var msg in Messages.Take(Messages.Count - 1))
+        {
+            chatList.Add(new
+            {
+                role = msg.Role.ToLower(),
+                content = msg.Content,
+                images = msg.Images?.ToArray()
+            });
+        }
+
+        chatList.Add(new
+        {
+            role = "user",
+            content = currentText,
+            images = currentImages.ToArray()
+        });
+
+        return chatList;
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            var buffer = new byte[file.Size];
+            await file.OpenReadStream().ReadAsync(buffer);
+            AttachedImages.Add(Convert.ToBase64String(buffer));
+        }
+    }
+
+    private void RemoveImage(string base64) => AttachedImages.Remove(base64);
+
+    [JSInvokable]
+    public void OnImagePasted(string base64Image)
+    {
+        var pureBase64 = base64Image.Contains(",") ? base64Image.Split(',')[1] : base64Image;
+        AttachedImages.Add(pureBase64);
+        StateHasChanged();
+    }
+
+    public void Dispose() => _objRef?.Dispose();
+}

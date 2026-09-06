@@ -1,0 +1,36 @@
+@using DiffPlex.DiffBuilder.Model
+
+<div class="log-column" id="@Id" style="--dynamic-font-size: @(FontSize)px; --dynamic-row-height: @(RowHeight)px;">
+    <div class="column-header">
+        <span class="header-label">@Title : </span>
+        <span class="header-date">@(TargetDate?.ToString("yyyy-MM-dd") ?? "날짜 미선택")</span>
+    </div>
+    <div class="column-body scroll-styled">
+        <Virtualize Items="@Lines" Context="line" ItemSize="@RowHeight" OverscanCount="20">
+            <div class="log-line @GetClass(line.Type)">
+                <span class="line-number">@(line.Position?.ToString() ?? "")</span>
+                <pre class="line-content">@line.Text</pre>
+            </div>
+        </Virtualize>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public DateOnly? TargetDate { get; set; }
+    [Parameter] public List<DiffPiece> Lines { get; set; } = new();
+    [Parameter] public int FontSize { get; set; } = 13;
+
+    private float RowHeight => FontSize + 11.0f;
+
+    // 상태에 따른 CSS 클래스 반환
+    private string GetClass(ChangeType type) => type switch
+    {
+        ChangeType.Inserted => "diff-inserted",
+        ChangeType.Deleted => "diff-deleted",
+        ChangeType.Modified => "diff-modified",
+        ChangeType.Unchanged => "diff-unchanged",
+        _ => "diff-imaginary"
+    };
+}

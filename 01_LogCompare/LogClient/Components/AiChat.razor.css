@@ -1,0 +1,237 @@
+/* 1. 사이드바 본체: 배경을 약간 더 밝게 해서 본문과 분리 */
+.ai-sidebar {
+    display: flex;
+    flex-direction: column;
+    /* 화면 높이에 딱 맞게 고정 (매우 중요) */
+    height: 80vh !important;
+    max-height: 80vh !important;
+    width: 400px;
+    min-width: 400px;
+    max-width: 400px;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-color);
+    overflow: hidden; /* 사이드바 자체가 늘어나는 것을 원천 차단 */
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 2. 헤더: 확실한 상단 구분 */
+.sidebar-header {
+    padding: 15px 20px;
+    background: var(--bg-panel-header);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border-color);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+    transition: color 0.15s ease;
+}
+
+/* 3. 새 대화 버튼: 깔끔한 테두리 버튼으로 */
+.clear-btn {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+    .clear-btn:hover {
+        background: var(--border-color);
+    }
+
+/* 4. 채팅 내역 영역 */
+.chat-history {
+    flex: 1; /* 남은 공간을 모두 차지 */
+    overflow-y: auto; /* 내용이 많으면 내부 스크롤 발생 */
+    /* [마법의 속성] Flex 자식이 자신의 콘텐츠 크기 때문에 늘어나는 것을 막음 */
+    min-height: 0 !important;
+    padding: 20px;
+    background: var(--bg-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transition: background-color 0.15s ease;
+}
+
+/* 5. 비어있을 때 안내 문구 가독성 업 */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    text-align: center;
+    transition: color 0.15s ease;
+}
+
+    .empty-state p {
+        font-size: 14px;
+        margin-bottom: 8px;
+        color: var(--text-primary);
+        transition: color 0.15s ease;
+    }
+
+    .empty-state small {
+        color: var(--text-secondary);
+        transition: color 0.15s ease;
+    }
+
+/* 6. 메시지 버블: 가독성 핵심 */
+.message-bubble {
+    margin-bottom: 20px;
+}
+
+.bubble-content {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6; /* 행간을 넓혀 가독성 향상 */
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.user .bubble-content {
+    background: #238636; /* 선명한 녹색 */
+    color: #ffffff;
+    align-self: flex-end;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.assistant .bubble-content {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    align-self: flex-start;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 7. 입력 섹션: 더 깔끔하게 정리 */
+.chat-input-section {
+    flex-shrink: 0; /* 어떤 경우에도 줄어들거나 밀려나지 않음 */
+    padding: 20px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-textarea {
+    width: 100%;
+    height: 100px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px;
+    border-radius: 8px;
+    resize: none;
+    font-size: 14px;
+    margin-bottom: 10px;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+    .ai-textarea:focus {
+        border-color: #58a6ff;
+        outline: none;
+    }
+
+.send-btn {
+    width: 100%;
+    padding: 10px;
+    background: #238636; /* 전송 버튼은 확실하게 녹색 */
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .send-btn:disabled {
+        background: var(--bg-card-hover);
+        color: var(--text-secondary);
+    }
+
+/* 8. 하단 컨텍스트 정보 */
+.input-footer {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    transition: color 0.15s ease;
+}
+
+
+/* 이미지 미리보기 컨테이너 */
+.image-preview-container {
+    display: flex;
+    gap: 10px;
+    padding: 10px 15px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    overflow-x: auto; /* 이미지가 많으면 가로 스크롤 */
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.preview-item {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+    .preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        transition: border-color 0.15s ease;
+    }
+
+/* 삭제 버튼 */
+.remove-img-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #f85149;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.input-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.icon-btn {
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--text-secondary);
+    padding: 5px;
+    transition: color 0.15s ease;
+}
+
+    .icon-btn:hover {
+        color: #58a6ff;
+    }

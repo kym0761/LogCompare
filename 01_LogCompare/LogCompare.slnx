@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/솔루션 항목/">
+    <File Path=".dockerignore" />
+    <File Path="docker-compose.yml" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="LogAPI/LogAPI.csproj" />
+  <Project Path="LogClient/LogClient.csproj" />
+  <Project Path="LogLibrary/LogLibrary.csproj" Id="aacdccc7-8341-40d2-bc62-67633fb0eff5" />
+  <Project Path="LogWorker/LogWorker.csproj" Id="92e0cdf3-ee74-4f96-84c8-6c6d79c4e724" />
+</Solution>

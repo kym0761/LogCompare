@@ -1,0 +1,56 @@
+
+<!-- 추후, 스위치 장비 모델을 확실하게 구분할 수 있다면 추가 드롭다운을 넣을 것! -->
+
+<div class="row g-2 mb-3 p-2 rounded align-items-end" style="background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;">
+    <div class="col-md-6">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">1. 디바이스</label>
+        <select class="custom-select-dark" value="@SelectedDevice" @onchange="OnDeviceChanged">
+            <option value="">-- 장비 선택 --</option>
+            @foreach (var name in DeviceNames)
+            {
+                <option value="@name">@name</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-6">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">2. 날짜</label>
+        <select class="custom-select-dark" value="@TargetDate?.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" disabled="@(string.IsNullOrEmpty(SelectedDevice))">
+            <option value="">-- 날짜 선택 --</option>
+            @foreach (var date in AvailableDates)
+            {
+                <option value="@date.ToString("yyyy-MM-dd")">@date.ToString("yyyy-MM-dd")</option>
+            }
+        </select>
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<string> DeviceNames { get; set; } = new();
+    [Parameter] public List<DateOnly> AvailableDates { get; set; } = new();
+
+    [Parameter] public string SelectedDevice { get; set; } = "";
+    [Parameter] public DateOnly? TargetDate { get; set; }
+
+    [Parameter] public EventCallback<string> OnDeviceSelected { get; set; }
+    [Parameter] public EventCallback<DateOnly?> OnDateSelected { get; set; }
+
+    private async Task OnDeviceChanged(ChangeEventArgs e)
+    {
+        await OnDeviceSelected.InvokeAsync(e.Value?.ToString() ?? "");
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        var stringValue = e.Value?.ToString();
+
+        if (string.IsNullOrEmpty(stringValue))
+        {
+            await OnDateSelected.InvokeAsync(null);
+        }
+        else if (DateOnly.TryParse(stringValue, out var newDate))
+        {
+            await OnDateSelected.InvokeAsync(newDate);
+        }
+    }
+}

@@ -1,0 +1,94 @@
+@page "/"
+
+<PageTitle>LogCompare - Dashboard</PageTitle>
+
+<div class="dashboard-container">
+    <!-- Hero Section -->
+    <header class="hero-section text-center mb-5">
+        <h1 class="display-4 fw-bold gradient-text mb-3">LogCompare & Analyzer</h1>
+        <p class="lead text-muted mx-auto" style="max-width: 600px;">
+            네트워크 장비의 대용량 로그 분석, 실시간 Diff 비교 및 지능형 요약 기능을 제공하는 전문 웹 콘솔입니다.
+        </p>
+    </header>
+
+    <!-- Interactive Feature Cards Grid -->
+    <section class="row g-4 justify-content-center mb-5">
+        <!-- Log Compare Card -->
+        <div class="col-md-4">
+            <a href="log-compare" class="feature-card-link">
+                <div class="feature-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div class="card-top">
+                        <div class="card-icon-wrapper compare-icon mb-3">
+                            <i class="bi bi-arrow-left-right"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-2">로그 비교 분석</h3>
+                        <p class="text-secondary small mb-0">
+                            서로 다른 두 시점의 대용량 로그 파일을 가져와 변경사항(추가, 삭제, 수정)을 고성능 뷰어로 정밀 동기화하여 비교합니다.
+                        </p>
+                    </div>
+                    <div class="card-footer-action mt-4 d-flex align-items-center justify-content-between text-info">
+                        <span class="small fw-bold">바로가기</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Log View Card -->
+        <div class="col-md-4">
+            <a href="log-view" class="feature-card-link">
+                <div class="feature-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div class="card-top">
+                        <div class="card-icon-wrapper view-icon mb-3">
+                            <i class="bi bi-file-text"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-2">로그 원본 조회</h3>
+                        <p class="text-secondary small mb-0">
+                            개별 장비의 'show logging' 원본 로그를 일자별로 신속하게 조회하고, 에러 및 경고 구문을 시각적으로 하이라이팅하여 탐색합니다.
+                        </p>
+                    </div>
+                    <div class="card-footer-action mt-4 d-flex align-items-center justify-content-between text-info">
+                        <span class="small fw-bold">바로가기</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Log Upload Card -->
+        <div class="col-md-4">
+            <a href="upload" class="feature-card-link">
+                <div class="feature-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div class="card-top">
+                        <div class="card-icon-wrapper upload-icon mb-3">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                        </div>
+                        <h3 class="h4 fw-bold mb-2">로그 파일 업로드</h3>
+                        <p class="text-secondary small mb-0">
+                            분석 대상 장비의 로그 파일들을 다중 선택하여 서버 저장소에 대량 업로드 및 데이터베이스 등록 처리를 수행합니다.
+                        </p>
+                    </div>
+                    <div class="card-footer-action mt-4 d-flex align-items-center justify-content-between text-info">
+                        <span class="small fw-bold">바로가기</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- Warning / Alert Section -->
+    <footer class="alert-section mx-auto" style="max-width: 900px;">
+        <div class="warning-banner p-3 d-flex align-items-center gap-3">
+            <div class="warning-icon-wrapper flex-shrink-0 text-warning">
+                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            </div>
+            <div class="warning-text">
+                <h4 class="h6 fw-bold text-warning mb-1">인공지능(LLM) 요약 분석 주의사항</h4>
+                <p class="mb-0 text-secondary small">
+                    대화형 분석 및 로그 요약 기능을 사용하려면 백엔드 AI 모델(Ollama)이 기동되어 있어야 하며, 로컬 GPU 인프라 리소스 상태에 따라 지연이 발생할 수 있습니다.
+                </p>
+            </div>
+        </div>
+    </footer>
+</div>

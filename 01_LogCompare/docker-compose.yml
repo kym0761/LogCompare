@@ -1,0 +1,118 @@
+volumes:
+  # Windows Docker Desktop (WSL 2) 환경에서 NTFS 호스트 절대 경로(예: C:/...)에 직접 바인딩할 경우
+  # POSIX 권한 미지원, 파일 잠금(Locking) 오류 및 DB 엔진 크래시/손상 버그가 발생할 수 있습니다.
+  # 이를 예방하고 안정적인 ext4 네이티브 성능을 확보하기 위해 도커 Named Volume을 선언하여 사용합니다.
+  postgres_data_v18:
+
+services:
+  postgres-db:
+    container_name: postgres-db
+    image: postgres:18.4
+    stop_grace_period: 30s
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: LogCompareDb
+      TZ: Asia/Seoul
+    #restart: unless-stopped
+    volumes:
+      # 호스트 경로 바인딩 대신 위의 Named Volume을 매핑하여 가상화 파일 시스템 권한 충돌 및 유실 방지
+      - postgres_data_v18:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d LogCompareDb"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+      # DB 엔진의 첫 기동 및 내부 초기화 작업 시간 동안 실패 횟수가 누적되어 비정상 상태로 진입하는 것을 방지하기 위해 10초 유예 적용
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 256M
+
+  log-api:
+    container_name: log-api
+    build:
+      context: .
+      dockerfile: LogAPI/Dockerfile
+    ports:
+      - "7075:7075"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:7075
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=LogCompareDb;Username=postgres;Password=password;
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    #restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  log-client:
+    container_name: log-client
+    build:
+      context: .
+      dockerfile: LogClient/Dockerfile
+    ports:
+      - "7014:7014" #도커가 아닌 visual studio로 실행 및 디버깅 시, 7077포트로 접근할 것
+    depends_on:
+      - log-api
+    #restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  log-worker:
+    container_name: log-worker
+    build:
+      context: .
+      dockerfile: LogWorker/Dockerfile
+    environment:
+      # == DB Setting ==
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=LogCompareDb;Username=postgres;Password=password;
+      # == Choose Your LLM Engine ==
+      - LlmProvider=Ollama
+      # === Ollama Settings ===
+      - Ollama__Endpoint=http://host.docker.internal:11434/v1
+      - Ollama__ModelId=gemma4:12b
+      # === vLLM Settings ===
+      - Vllm__Endpoint=http://host.docker.internal:8000/v1
+      - Vllm__ModelId=meta-llama/Meta-Llama-3-8B-Instruct
+      - Vllm__ApiKey=no-key
+      # === File Settings ===
+      - FileSettings__PromptFolderPath=/app/prompts
+      - FileSettings__RawLogFolderPath=/app/raw_logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # 리눅스에서 호스트에 접근하기 위한 설정
+    volumes:
+      # 윈도우의 특정 폴더와 볼륨을 연결
+      # 리눅스면 변경해줄 것
+      - ./.prompts:/app/prompts
+      - ./.raw_logs:/app/raw_logs
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    #restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 256M
+
+    # 재빌드 시 : docker compose up -d --build
+    # 실행만 : docker compose up -d
+    # 끄기 : docker compose down
+    # 빌드만 : docker compose build
+    # 컨테이너 접속 : docker exec -it [container_name] bash

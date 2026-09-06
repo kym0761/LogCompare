@@ -1,0 +1,93 @@
+
+<!-- 추후, 스위치 장비 모델을 확실하게 구분할 수 있다면 추가 드롭다운을 넣을 것! -->
+
+@* 1. 최상위 드롭다운 필터 영역 (통제탑) *@
+<div class="row g-2 mb-3 p-2 rounded align-items-end" style="background-color: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;">
+    <div class="col-md-3">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">1. 디바이스</label>
+        <select class="custom-select-dark" value="@SelectedDevice" @onchange="OnDeviceChanged">
+            <option value="">-- 장비 선택 --</option>
+            @foreach (var name in DeviceNames)
+            {
+                <option value="@name">@name</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">2. 왼쪽 날짜</label>
+        <select class="custom-select-dark" value="@LeftDate?.ToString("yyyy-MM-dd")" @onchange="@(e => OnDateChanged(e, true))" disabled="@(string.IsNullOrEmpty(SelectedDevice))">
+            <option value="">-- 날짜 선택 --</option>
+            @foreach (var date in AvailableDates)
+            {
+                <option value="@date.ToString("yyyy-MM-dd")">@date.ToString("yyyy-MM-dd")</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">3. 오른쪽 날짜</label>
+        <select class="custom-select-dark" value="@RightDate?.ToString("yyyy-MM-dd")" @onchange="@(e => OnDateChanged(e, false))" disabled="@(string.IsNullOrEmpty(SelectedDevice))">
+            <option value="">-- 날짜 선택 --</option>
+            @foreach (var date in AvailableDates)
+            {
+                <option value="@date.ToString("yyyy-MM-dd")">@date.ToString("yyyy-MM-dd")</option>
+            }
+        </select>
+    </div>
+
+    <div class="col-md-3">
+        <label class="small mb-1" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">4. 명령어</label>
+        <select class="custom-select-dark" value="@SelectedCommand" @onchange="OnCommandChanged" disabled="@(string.IsNullOrEmpty(SelectedDevice))">
+            <option value="">-- 명령어 선택 --</option>
+            @foreach (var cmd in AvailableCommands)
+            {
+                <option value="@cmd">@cmd</option>
+            }
+        </select>
+    </div>
+</div>
+
+@code {
+    // 부모로부터 받을 데이터 목록 [cite: 34, 36, 37, 38]
+    [Parameter] public List<string> DeviceNames { get; set; } = new();
+    [Parameter] public List<DateOnly> AvailableDates { get; set; } = new();
+    [Parameter] public List<string> AvailableCommands { get; set; } = new();
+
+    // 현재 선택된 상태 값들 [cite: 36, 37, 38]
+    [Parameter] public string SelectedDevice { get; set; } = "";
+    [Parameter] public DateOnly? LeftDate { get; set; }
+    [Parameter] public DateOnly? RightDate { get; set; }
+    [Parameter] public string SelectedCommand { get; set; } = "";
+
+    // 값이 변경될 때 부모에게 알릴 이벤트 콜백
+    [Parameter] public EventCallback<string> OnDeviceSelected { get; set; }
+    [Parameter] public EventCallback<(DateOnly? date, bool isLeft)> OnDateSelected { get; set; }
+    [Parameter] public EventCallback<string> OnCommandSelected { get; set; }
+
+    private async Task OnDeviceChanged(ChangeEventArgs e)
+    {
+        await OnDeviceSelected.InvokeAsync(e.Value?.ToString() ?? "");
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e, bool isLeft)
+    {
+        var stringValue = e.Value?.ToString();
+
+        // 1. 빈 값("-- 날짜 선택 --")이 선택된 경우 null을 전달합니다.
+        if (string.IsNullOrEmpty(stringValue))
+        {
+            await OnDateSelected.InvokeAsync((null, isLeft));
+        }
+        // 2. 정상적인 날짜 문자열이 들어온 경우 변환하여 전달합니다.
+        else if (DateOnly.TryParse(stringValue, out var newDate))
+        {
+            await OnDateSelected.InvokeAsync((newDate, isLeft));
+        }
+    }
+
+    private async Task OnCommandChanged(ChangeEventArgs e)
+    {
+        await OnCommandSelected.InvokeAsync(e.Value?.ToString() ?? "");
+    }
+}

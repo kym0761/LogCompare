@@ -1,0 +1,316 @@
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<div class="custom-panel">
+    <div class="custom-panel-header">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fw-bold">
+                <i class="bi bi-file-text me-2"></i>로그 원본
+            </span>
+            <FontSizeSelector @bind-FontSize="fontSize" />
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            @{
+                bool hasHighlights = totalHighlights > 0;
+                string badgeClass = hasHighlights ? "badge-secondary-custom" : "control-btn";
+                if (hasHighlights && currentHighlightPos >= 0 && currentHighlightPos < highlightedLevels.Count)
+                {
+                    badgeClass = highlightedLevels[currentHighlightPos] <= 3 ? "badge-danger-custom" : "badge-warning-custom";
+                }
+            }
+            
+            <div class="btn-group btn-group-sm border rounded shadow-sm control-btn-group">
+                <button class="btn btn-sm control-btn fw-bold" 
+                        @onmousedown="StartContinuousPrev" 
+                        @onmouseup="StopContinuousNav" 
+                        @onmouseleave="StopContinuousNav" 
+                        disabled="@(!hasHighlights)" title="이전 경고/에러 (길게 누르면 연속 이동)">
+                    <i class="bi bi-chevron-up me-1"></i>▲ Prev
+                </button>
+                <button class="btn btn-sm @badgeClass rounded-0 px-3 panel-count-badge fw-bold"
+                        @onclick="ScrollToCurrent"
+                        disabled="@(!hasHighlights)"
+                        title="클릭 시 현재 선택된 위치로 스크롤 이동">
+                    @(hasHighlights ? $"{currentHighlightPos + 1} / {totalHighlights}" : "0 / 0")
+                </button>
+                <button class="btn btn-sm control-btn fw-bold" 
+                        @onmousedown="StartContinuousNext" 
+                        @onmouseup="StopContinuousNav" 
+                        @onmouseleave="StopContinuousNav" 
+                        disabled="@(!hasHighlights)" title="다음 경고/에러 (길게 누르면 연속 이동)">
+                    ▼ Next<i class="bi bi-chevron-down ms-1"></i>
+                </button>
+            </div>
+            <span class="badge bg-primary">@(TargetDate?.ToString("yyyy-MM-dd") ?? "날짜 미선택")</span>
+        </div>
+    </div>
+    <div class="custom-panel-body">
+        <div id="log-scroll-container" class="log-content-container p-0 scroll-styled panel-scroll-area" style="--dynamic-font-size: @(fontSize)px; --dynamic-row-height: @(rowHeight)px;">
+            @if (string.IsNullOrEmpty(DeviceName) || TargetDate == null)
+            {
+                <div class="text-muted text-center mt-5">
+                    <i class="bi bi-info-circle display-4 d-block mb-3"></i>
+                    장비와 날짜를 선택하여 로그를 조회하세요.
+                </div>
+            }
+            else if (logLinesData.Count == 0)
+            {
+                <div class="text-muted text-center mt-5">
+                    @if (logContentText == "로딩 중...")
+                    {
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                    }
+                    @(string.IsNullOrEmpty(logContentText) ? "데이터가 없습니다." : logContentText)
+                </div>
+            }
+            else
+            {
+                //TODO : 찾기 기능 필요
+                <Virtualize Items="@logLinesData" Context="line" ItemSize="@rowHeight" OverscanCount="20">
+                    @{
+                        bool isHl = (line.LogLevel != -1);
+                        bool isCurrentNav = (isHl && line.HighlightIndex == currentHighlightPos);
+                        string currentNavClass = isCurrentNav ? "active-nav-line" : "";
+                    }
+                    <div id="@(isHl ? $"hl-{line.HighlightIndex}" : null)" class="log-line @line.HighlightClass @currentNavClass">
+                        <span class="line-number @(isHl ? "clickable-line" : "")" @onclick="@(() => { if (isHl) OnHighlightLineClicked(line.HighlightIndex); })" title="@(isHl ? "클릭하여 네비게이션 동기화" : "")">@line.LineNumber</span>
+                        <pre class="line-content">@line.Text</pre>
+                    </div>
+                </Virtualize>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DeviceName { get; set; } = "";
+    [Parameter] public DateOnly? TargetDate { get; set; }
+
+    private int fontSize = 13;
+    private float rowHeight => fontSize + 11.0f;
+
+    private const string TARGET_COMMAND = "show logging";
+    private string logContentText = "";
+    
+    public record LogLineData(int LineNumber, string Text, int LogLevel, int HighlightIndex, string HighlightClass);
+
+    private List<LogLineData> logLinesData = new();
+
+    private int totalHighlights = 0;
+    private int currentHighlightPos = -1;
+    private List<int> highlightedLevels = new();
+    private List<int> highlightGlobalIndices = new();
+    private System.Threading.CancellationTokenSource? continuousNavCts;
+
+    private string _prevDevice = "";
+    private DateOnly? _prevDate = null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (DeviceName != _prevDevice || TargetDate != _prevDate)
+        {
+            _prevDevice = DeviceName;
+            _prevDate = TargetDate;
+            await FetchLogContents();
+        }
+    }
+
+    private int GetHighlightLevel(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return -1;
+        var match = System.Text.RegularExpressions.Regex.Match(line, @"%[A-Z0-9_]+-(\d)-[A-Z0-9_]+");
+        if (match.Success && int.TryParse(match.Groups[1].Value, out int level))
+        {
+            if (level <= 3) return 3;
+            if (level == 4) return 4;
+        }
+        return -1;
+    }
+
+    private string GetHighlightClass(int level) => level switch
+    {
+        3 => "text-danger fw-bold bg-danger bg-opacity-10",
+        4 => "text-warning fw-bold bg-warning bg-opacity-10",
+        _ => ""
+    };
+
+    private async Task StartContinuousNext()
+    {
+        StopContinuousNav();
+        continuousNavCts = new System.Threading.CancellationTokenSource();
+        var token = continuousNavCts.Token;
+
+        await ScrollToNext();
+
+        try
+        {
+            await Task.Delay(300, token);
+            while (!token.IsCancellationRequested)
+            {
+                await ScrollToNext();
+                await Task.Delay(150, token);
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private async Task StartContinuousPrev()
+    {
+        StopContinuousNav();
+        continuousNavCts = new System.Threading.CancellationTokenSource();
+        var token = continuousNavCts.Token;
+
+        await ScrollToPrev();
+
+        try
+        {
+            await Task.Delay(300, token);
+            while (!token.IsCancellationRequested)
+            {
+                await ScrollToPrev();
+                await Task.Delay(150, token);
+            }
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private void StopContinuousNav()
+    {
+        if (continuousNavCts != null)
+        {
+            continuousNavCts.Cancel();
+            continuousNavCts.Dispose();
+            continuousNavCts = null;
+        }
+    }
+
+    private async Task ScrollToNext()
+    {
+        if (totalHighlights == 0) return;
+        currentHighlightPos = (currentHighlightPos + 1) % totalHighlights;
+        StateHasChanged();
+        await ScrollToCurrent();
+    }
+
+    private async Task ScrollToPrev()
+    {
+        if (totalHighlights == 0) return;
+        currentHighlightPos = (currentHighlightPos - 1 + totalHighlights) % totalHighlights;
+        StateHasChanged();
+        await ScrollToCurrent();
+    }
+
+    private async Task ScrollToCurrent()
+    {
+        if (currentHighlightPos >= 0 && currentHighlightPos < highlightGlobalIndices.Count)
+        {
+            try
+            {
+                int targetGlobalIndex = highlightGlobalIndices[currentHighlightPos];
+                double targetScrollTop = targetGlobalIndex * rowHeight;
+                
+                string jsCode = $@"
+                    (() => {{
+                        const c = document.getElementById('log-scroll-container');
+                        if (c) {{
+                            const offset = (c.clientHeight / 2) - ({rowHeight} / 2);
+                            c.scrollTop = {targetScrollTop} - offset;
+                        }}
+                    }})();
+                ";
+
+                // 1차 스크롤 이동 (브라우저 스크롤 위치 이동 및 Virtualize 스페이서 계산 트리거)
+                await JSRuntime.InvokeVoidAsync("eval", jsCode);
+                
+                // Virtualize 컴포넌트가 내부 스페이서(Spacer) 높이를 재계산하고 렌더링할 수 있도록 50ms 딜레이 부여
+                await Task.Delay(50);
+                
+                // 2차 스크롤 이동 (스페이서가 갱신된 후 정확한 타겟 위치로 최종 고정)
+                await JSRuntime.InvokeVoidAsync("eval", jsCode);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Virtualize scroll failed: {ex.Message}");
+            }
+        }
+    }
+
+    private void OnHighlightLineClicked(int index)
+    {
+        if (index >= 0 && index < totalHighlights)
+        {
+            currentHighlightPos = index;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FetchLogContents()
+    {
+        if (string.IsNullOrEmpty(DeviceName) || TargetDate == null)
+        {
+            logContentText = "";
+            logLinesData.Clear();
+            totalHighlights = 0;
+            currentHighlightPos = -1;
+            highlightedLevels.Clear();
+            highlightGlobalIndices.Clear();
+            return;
+        }
+
+        try
+        {
+            logContentText = "로딩 중...";
+            logLinesData.Clear();
+            StateHasChanged();
+
+            var result = await Http.GetStringAsync($"api/compare/content?deviceName={Uri.EscapeDataString(DeviceName)}&date={TargetDate?.ToString("yyyy-MM-dd")}&command={Uri.EscapeDataString(TARGET_COMMAND)}");
+            
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                logContentText = "로딩 완료";
+                var rawLines = result.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                
+                logLinesData.Clear();
+                highlightedLevels.Clear();
+                highlightGlobalIndices.Clear();
+
+                int lineNum = 1;
+                int hlIdx = 0;
+
+                foreach (var line in rawLines)
+                {
+                    int level = GetHighlightLevel(line);
+                    string hlClass = level != -1 ? GetHighlightClass(level) : "";
+                    int currentHlIdx = level != -1 ? hlIdx++ : -1;
+
+                    if (level != -1)
+                    {
+                        highlightedLevels.Add(level);
+                        highlightGlobalIndices.Add(lineNum - 1);
+                    }
+
+                    logLinesData.Add(new LogLineData(lineNum++, line, level, currentHlIdx, hlClass));
+                }
+
+                totalHighlights = highlightedLevels.Count;
+                currentHighlightPos = totalHighlights > 0 ? 0 : -1;
+            }
+            else
+            {
+                logContentText = "데이터가 없습니다.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"로그 데이터 로드 실패: {ex.Message}");
+            logContentText = "데이터를 불러오는 중 오류가 발생했습니다.";
+            logLinesData.Clear();
+            totalHighlights = 0;
+            currentHighlightPos = -1;
+            highlightedLevels.Clear();
+            highlightGlobalIndices.Clear();
+        }
+        
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,84 @@
+@inject IJSRuntime JS
+
+<nav class="navbar navbar-expand-md @(currentTheme == "dark" ? "navbar-dark" : "navbar-light") custom-header">
+    <div class="container-fluid px-4">
+        @* 로고 영역: 약간의 디자인 포인트 *@
+        <a class="navbar-brand d-flex align-items-center" href="">
+            <div class="logo-icon me-2">L</div>
+            <span class="brand-text">LogClient</span>
+        </a>
+        
+        <button class="navbar-toggler custom-toggler" type="button" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+ 
+        <div class="@NavMenuCssClass navbar-collapse justify-content-end">
+            <ul class="navbar-nav gap-2">
+ 
+                <!-- NavMenu (header)의 기능에 맞는 링크들 -->
+ 
+                <li class="nav-item">
+                    <NavLink class="nav-link custom-link" href="" Match="NavLinkMatch.All">
+                        <i class="bi bi-house-door"></i> <span>Home</span>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link custom-link" href="upload">
+                        <i class="bi bi-cloud-arrow-up"></i> <span>Upload</span>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link custom-link" href="log-compare">
+                        <i class="bi bi-arrow-left-right"></i> <span>Compare</span>
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link custom-link" href="log-view">
+                        <i class="bi bi-file-text"></i> <span>Show Logging Only</span>
+                    </NavLink>
+                </li>
+                
+                <!-- 테마 토글 버튼 -->
+                <li class="nav-item d-flex align-items-center ms-md-2">
+                    <button class="btn theme-toggle-btn d-flex align-items-center justify-content-center" @onclick="ToggleTheme" title="테마 전환">
+                        @if (currentTheme == "dark")
+                        {
+                            <i class="bi bi-sun-fill text-warning fs-5"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-moon-stars-fill text-primary fs-5"></i>
+                        }
+                    </button>
+                </li>
+ 
+            </ul>
+        </div>
+    </div>
+</nav>
+ 
+@code {
+    private bool collapseNavMenu = true;
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+    private string currentTheme = "dark";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            currentTheme = await JS.InvokeAsync<string>("themeHelper.getTheme");
+            StateHasChanged();
+        }
+    }
+ 
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task ToggleTheme()
+    {
+        currentTheme = currentTheme == "dark" ? "light" : "dark";
+        await JS.InvokeVoidAsync("themeHelper.setTheme", currentTheme);
+    }
+}

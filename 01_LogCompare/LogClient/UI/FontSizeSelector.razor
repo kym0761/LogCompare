@@ -1,0 +1,28 @@
+<div class="btn-group btn-group-sm border rounded shadow-sm">
+    <span class="btn font-size-display px-2 fw-bold">@($"{FontSize}px")</span>
+    <button class="btn btn-adjust fw-bold px-2" @onclick="OnDecrease" title="글자 크기 축소">-</button>
+    <button class="btn btn-adjust fw-bold px-2" @onclick="OnIncrease" title="글자 크기 확대">+</button>
+</div>
+
+@code {
+    [Parameter] public int FontSize { get; set; } = 13;
+    [Parameter] public EventCallback<int> FontSizeChanged { get; set; }
+
+    private async Task OnIncrease()
+    {
+        if (FontSize < 24)
+        {
+            FontSize++;
+            await FontSizeChanged.InvokeAsync(FontSize);
+        }
+    }
+
+    private async Task OnDecrease()
+    {
+        if (FontSize > 12)
+        {
+            FontSize--;
+            await FontSizeChanged.InvokeAsync(FontSize);
+        }
+    }
+}

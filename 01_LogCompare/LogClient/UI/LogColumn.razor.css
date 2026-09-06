@@ -1,0 +1,134 @@
+/* 실제 스크롤이 발생하는 핵심 요소 (JS의 ID가 여기 붙어야 함) */
+.log-column {
+    flex: 1;
+    min-width: 0; /* 가로 튀어나옴 방지 */
+    min-height: 0; /* 세로 튀어나옴 방지 */
+    overflow: auto !important; /* 가로/세로 스크롤 모두 활성화 */
+    background: var(--bg-primary);
+    transition: background-color 0.15s ease;
+}
+
+/* 스크롤바 디자인 (테마 최적화) */
+.log-column::-webkit-scrollbar {
+    width: 10px;
+}
+
+.log-column::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.log-column::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 5px;
+}
+
+.log-column::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+/* 컬럼 헤더 스타일 */
+.column-header {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* 로그 라인보다 위에 위치 */
+    background-color: var(--bg-panel-header);
+    padding: 2px 4px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.header-label {
+    color: var(--text-secondary);
+    margin-right: 8px;
+    font-size: 0.75rem;
+    transition: color 0.15s ease;
+}
+
+.header-date {
+    color: #58a6ff; /* 강조를 위해 파란색 계열 사용 */
+}
+
+/* 로그 한 줄 구조 */
+.log-line {
+    display: flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+    font-size: var(--dynamic-font-size, 13px);
+    min-width: 100%;
+    width: max-content;
+    height: var(--dynamic-row-height, 24px);
+}
+
+.log-line:hover {
+    background-color: rgba(128, 128, 128, 0.08); /* 마우스 호버 시 가독성 증대 */
+}
+
+/* 줄 번호 */
+.line-number {
+    width: 50px;
+    min-width: 50px;
+    text-align: right;
+    padding-right: 12px;
+    color: var(--line-number-color);
+    background-color: var(--line-number-bg);
+    user-select: none;
+    border-right: 1px solid var(--line-number-border);
+    position: sticky; /* 스크롤 시에도 번호는 고정 */
+    left: 0;
+    z-index: 5;
+    font-size: calc(var(--dynamic-font-size, 13px) - 1px);
+    height: var(--dynamic-row-height, 24px);
+    line-height: var(--dynamic-row-height, 24px);
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 로그 텍스트 */
+.line-content {
+    margin: 0;
+    padding: 0 12px;
+    color: var(--line-content-color);
+    flex: 1;
+    white-space: pre !important; /* 줄바꿈 방지 */
+    overflow: visible;
+    height: var(--dynamic-row-height, 24px);
+    line-height: var(--dynamic-row-height, 24px);
+    transition: color 0.15s ease;
+}
+
+/* 하이라이트 스타일 */
+.diff-inserted {
+    background-color: var(--diff-inserted-bg);
+    transition: background-color 0.15s ease;
+}
+
+.diff-inserted .line-content {
+    color: var(--diff-inserted-text);
+}
+
+.diff-deleted {
+    background-color: var(--diff-deleted-bg);
+    transition: background-color 0.15s ease;
+}
+
+.diff-deleted .line-content {
+    color: var(--diff-deleted-text);
+}
+
+.diff-modified {
+    background-color: var(--diff-modified-bg);
+    transition: background-color 0.15s ease;
+}
+
+.diff-modified .line-content {
+    color: var(--diff-modified-text);
+}
+
+.diff-imaginary {
+    background-color: var(--bg-primary);
+    opacity: 0.5;
+    transition: background-color 0.15s ease;
+}

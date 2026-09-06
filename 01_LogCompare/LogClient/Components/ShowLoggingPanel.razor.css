@@ -1,0 +1,132 @@
+/* 로그 한 줄 구조 (LogColumn 스타일 차용) */
+.log-line {
+    display: flex;
+    align-items: center;
+    font-family: Consolas, 'JetBrains Mono', monospace;
+    font-size: var(--dynamic-font-size, 13px);
+    min-width: 100%;
+    width: max-content;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    height: var(--dynamic-row-height, 24px);
+}
+
+.log-line:hover {
+    background-color: rgba(128, 128, 128, 0.08);
+}
+
+/* 줄 번호 */
+.line-number {
+    width: 55px;
+    min-width: 55px;
+    text-align: right;
+    padding-right: 12px;
+    color: var(--line-number-color);
+    background-color: var(--line-number-bg); /* 줄번호 전용 어두운 배경 */
+    user-select: none;
+    border-right: 1px solid var(--line-number-border);
+    font-size: calc(var(--dynamic-font-size, 13px) - 1px);
+    height: var(--dynamic-row-height, 24px);
+    line-height: var(--dynamic-row-height, 24px);
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 로그 텍스트 */
+.line-content {
+    margin: 0;
+    padding: 0 12px;
+    color: var(--line-content-color);
+    flex: 1;
+    white-space: pre !important;
+    overflow: visible;
+    height: var(--dynamic-row-height, 24px);
+    line-height: var(--dynamic-row-height, 24px);
+    transition: color 0.15s ease;
+}
+
+/* 하이라이트 색상 재정의 (자식 텍스트 색상 상속 보장) */
+.log-line.text-danger .line-content {
+    color: var(--text-danger-hl) !important;
+    transition: color 0.15s ease;
+}
+.log-line.text-warning .line-content {
+    color: var(--text-warning-hl) !important;
+    transition: color 0.15s ease;
+}
+
+/* 현재 네비게이션으로 선택된 줄 강조 (네모칸 테두리 + 글로우 효과) */
+.active-nav-line {
+    border-top: 1px solid #58a6ff !important;
+    border-bottom: 1px solid #58a6ff !important;
+    background-color: rgba(88, 166, 255, 0.18) !important;
+    box-shadow: inset 4px 0 0 #58a6ff, 0 0 12px rgba(88, 166, 255, 0.4);
+}
+
+.active-nav-line .line-number {
+    background-color: rgba(88, 166, 255, 0.25) !important;
+    color: #58a6ff !important;
+    font-weight: bold;
+}
+
+/* 클릭 가능한 하이라이트 줄번호 호버 효과 */
+.line-number.clickable-line {
+    cursor: pointer;
+}
+.line-number.clickable-line:hover {
+    background-color: var(--border-color) !important;
+    color: #58a6ff !important;
+    font-weight: bold;
+}
+
+.panel-count-badge {
+    pointer-events: auto;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+.panel-scroll-area {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow: auto;
+}
+
+/* 컨트롤 버튼 그룹 스타일 */
+.control-btn-group {
+    background-color: var(--bg-card);
+    border-color: var(--border-color) !important;
+}
+
+.control-btn {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.control-btn:hover:not(:disabled) {
+    background-color: var(--bg-card-hover) !important;
+    color: var(--text-primary) !important;
+}
+
+.control-btn:disabled {
+    color: var(--text-secondary) !important;
+    opacity: 0.5;
+}
+
+.badge-warning-custom {
+    background-color: #e3b341 !important;
+    color: #1a1d21 !important;
+}
+
+.badge-danger-custom {
+    background-color: #ff7b72 !important;
+    color: #ffffff !important;
+}
+
+.badge-secondary-custom {
+    background-color: var(--bg-card-hover) !important;
+    color: var(--text-secondary) !important;
+}

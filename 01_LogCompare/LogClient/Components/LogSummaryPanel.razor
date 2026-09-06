@@ -1,0 +1,200 @@
+@* 파일명: LogSummaryPanel.razor *@
+@inject HttpClient Http
+
+<div class="custom-panel">
+    @* 헤더 영역: 명령어와 날짜 정보, 상태 뱃지 *@
+    <div class="custom-panel-header d-flex justify-content-between align-items-center">
+        <div class="ai-status d-flex align-items-center">
+            <span class="ai-name" style="font-weight: 600; font-size: 0.9rem;">
+                로그 분석 - @DisplayCommand : @(RightDate?.ToString("yyyy-MM-dd") ?? "날짜 미선택")
+            </span>
+            @if (SummaryData != null && !string.IsNullOrEmpty(SummaryData.SummaryText))
+            {
+                @if (SummaryData.Severity == "Critical")
+                {
+                    <span class="badge bg-danger ms-2">🚨 위험</span>
+                }
+                else if (SummaryData.Severity == "Warning")
+                {
+                    <span class="badge bg-warning text-dark ms-2">⚠️ 주의</span>
+                }
+                else
+                {
+                    <span class="badge bg-success ms-2">정상</span>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- 요약 및 진단 출력 영역 -->
+    <div class="custom-panel-body scroll-styled" style="overflow-y: auto;">
+        @if (IsLoading)
+        {
+            <div class="empty-state">
+                <span class="spinner-border spinner-border-sm text-info mb-2"></span>
+                <p>분석 데이터를 불러오는 중...</p>
+            </div>
+        }
+        else if (string.IsNullOrEmpty(DeviceName) || string.IsNullOrEmpty(Command))
+        {
+            <div class="empty-state">
+                <p>왼쪽 상단에서 장비와 명령어를 선택해 주세요.</p>
+            </div>
+        }
+        else if (SummaryData == null || string.IsNullOrEmpty(SummaryData.SummaryText))
+        {
+            <div class="empty-state">
+                <p>해당 날짜의 요약본이 존재하지 않습니다.</p>
+            </div>
+        }
+        else
+        {
+            <div class="summary-box d-flex flex-column gap-3 p-3">
+                @* 1. 1차 명령어 요약 카드 (접기/펼치기 가능) *@
+                <div class="card border-secondary" style="background-color: var(--bg-card, #161b22); color: var(--text-primary, #e6edf3);">
+                    <div class="card-header bg-transparent border-secondary text-info py-2 d-flex justify-content-between align-items-center"
+                         style="cursor: pointer; user-select: none;"
+                         @onclick="() => isSummaryExpanded = !isSummaryExpanded">
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="font-size: 0.85rem; font-weight: 600;">📋 1차 로그 요약</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary, #8b949e);">
+                                @(isSummaryExpanded ? "▲ 접기" : "▼ 펼치기")
+                            </span>
+                        </div>
+                        <span class="badge @(SummaryData.Severity == "Critical" ? "bg-danger" : SummaryData.Severity == "Warning" ? "bg-warning text-dark" : "bg-success")">
+                            @(SummaryData.Severity == "Critical" ? "위험" : SummaryData.Severity == "Warning" ? "주의" : "정상")
+                        </span>
+                    </div>
+                    @if (isSummaryExpanded)
+                    {
+                        <div class="card-body p-3">
+                            <div class="summary-text-content" style="white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; color: #e6edf3;">
+                                @SummaryData.SummaryText
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* 2. 2차 AI 심층 교차 진단 카드 (이슈 발생 시에만 노출, 접기/펼치기 가능) *@
+                @if (SummaryData.Diagnosis != null && !string.IsNullOrEmpty(SummaryData.Diagnosis.DiagnosisText))
+                {
+                    <div class="card border-warning" style="background: rgba(40, 30, 15, 0.45); color: var(--text-primary, #e6edf3);">
+                        <div class="card-header bg-transparent border-warning text-warning py-2 d-flex justify-content-between align-items-center"
+                             style="cursor: pointer; user-select: none;"
+                             @onclick="() => isDiagnosisExpanded = !isDiagnosisExpanded">
+                            <div class="d-flex align-items-center gap-2">
+                                <span style="font-size: 0.85rem; font-weight: 600;">
+                                    🩺 AI 심층 교차 진단 (Root Cause)
+                                </span>
+                                <span style="font-size: 0.75rem; color: #ffc107;">
+                                    @(isDiagnosisExpanded ? "▲ 접기" : "▼ 펼치기")
+                                </span>
+                            </div>
+                            <span class="badge @(SummaryData.Diagnosis.Severity == "Critical" ? "bg-danger" : "bg-warning text-dark")">
+                                @(SummaryData.Diagnosis.Severity == "Critical" ? "심각 장애 의심" : "연관 이상 감지")
+                            </span>
+                        </div>
+                        @if (isDiagnosisExpanded)
+                        {
+                            <div class="card-body p-3">
+                                @if (!string.IsNullOrEmpty(SummaryData.Diagnosis.ReferencedCommands))
+                                {
+                                    <div class="mb-2 p-2 rounded" style="background: rgba(255, 193, 7, 0.1); font-size: 0.8rem; color: #ffc107;">
+                                        <strong>교차 대조 명령어:</strong> @SummaryData.Diagnosis.ReferencedCommands
+                                    </div>
+                                }
+                                <div class="diagnosis-text-content" style="white-space: pre-wrap; font-size: 0.9rem; line-height: 1.6; color: #e6edf3;">
+                                    @SummaryData.Diagnosis.DiagnosisText
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string DeviceName { get; set; } = "";
+    [Parameter] public string Command { get; set; } = "";
+    [Parameter] public DateOnly? RightDate { get; set; }
+
+    private bool IsLoading = false;
+    private SummaryResponseModel? SummaryData;
+    private bool isSummaryExpanded = true;
+    private bool isDiagnosisExpanded = true;
+
+    private string _prevDevice = "";
+    private string _prevCommand = "";
+    private DateOnly? _prevDate = null;
+
+    private string DisplayCommand
+    {
+        get
+        {
+            int len = 15;
+            if (string.IsNullOrEmpty(Command))
+            {
+                return "명령어 미선택";
+            }
+            return Command.Length > len ? $"{Command.Substring(0, len)}..." : Command;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (DeviceName != _prevDevice || Command != _prevCommand || RightDate != _prevDate)
+        {
+            _prevDevice = DeviceName;
+            _prevCommand = Command;
+            _prevDate = RightDate;
+
+            if (!string.IsNullOrEmpty(DeviceName) && !string.IsNullOrEmpty(Command) && RightDate != null)
+            {
+                await LoadSummariesAsync();
+            }
+            else
+            {
+                SummaryData = null;
+            }
+        }
+    }
+
+    private async Task LoadSummariesAsync()
+    {
+        IsLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            string url = $"api/summary?deviceName={Uri.EscapeDataString(DeviceName)}&date={RightDate?.ToString("yyyy-MM-dd")}&command={Uri.EscapeDataString(Command)}";
+            SummaryData = await Http.GetFromJsonAsync<SummaryResponseModel>(url);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"요약본 로드 에러: {ex.Message}");
+            SummaryData = new SummaryResponseModel { SummaryText = "요약 데이터를 불러오는 중 오류가 발생했습니다." };
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public class SummaryResponseModel
+    {
+        public string SummaryText { get; set; } = string.Empty;
+        public string Severity { get; set; } = "Normal";
+        public DiagnosisResponseModel? Diagnosis { get; set; }
+    }
+
+    public class DiagnosisResponseModel
+    {
+        public string DiagnosisText { get; set; } = string.Empty;
+        public string ReferencedCommands { get; set; } = string.Empty;
+        public string Severity { get; set; } = "Warning";
+        public DateTime UpdatedAt { get; set; }
+    }
+}

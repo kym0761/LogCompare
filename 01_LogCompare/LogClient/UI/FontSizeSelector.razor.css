@@ -1,0 +1,33 @@
+.btn-group {
+    background-color: var(--bg-card);
+    border-color: var(--border-color) !important;
+}
+
+.font-size-display {
+    pointer-events: none;
+    min-width: 55px;
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: none !important;
+}
+
+.btn-adjust {
+    background-color: var(--bg-card) !important;
+    color: var(--text-secondary) !important;
+    border-left: 1px solid var(--border-color) !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-adjust:last-child {
+    border-top-right-radius: 5px !important;
+    border-bottom-right-radius: 5px !important;
+}
+
+.btn-adjust:hover {
+    background-color: var(--bg-card-hover) !important;
+    color: var(--text-primary) !important;
+}

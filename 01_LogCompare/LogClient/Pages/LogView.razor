@@ -1,0 +1,73 @@
+@page "/log-view"
+@inject HttpClient Http
+
+@* 1. 최상위 드롭다운 필터 영역 (단일 조회용) *@
+<LogViewDropdown DeviceNames="deviceNames"
+                 AvailableDates="availableDates"
+                 SelectedDevice="@selectedDevice"
+                 TargetDate="@targetDate"
+                 OnDeviceSelected="OnDeviceChangedAsync"
+                 OnDateSelected="OnDateChanged" />
+
+@* 2. 자식 컴포넌트 배치 영역 *@
+<div class="row">
+    <div class="col-8">
+        <ShowLoggingPanel DeviceName="@selectedDevice" TargetDate="@targetDate" />
+    </div>
+
+    <div class="col-4">
+        <LogSummaryPanel DeviceName="@selectedDevice" Command="@TARGET_COMMAND" RightDate="@targetDate" />
+    </div>
+</div>
+
+@code {
+    private List<string> deviceNames = new();
+    private List<DateOnly> availableDates = new();
+
+    private string selectedDevice = "";
+    private DateOnly? targetDate;
+    
+    // 고정된 조회 명령어
+    private const string TARGET_COMMAND = "show logging";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            deviceNames = await Http.GetFromJsonAsync<List<string>>("api/compare/devices") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"장비 목록 로드 실패: {ex.Message}");
+        }
+    }
+
+    private async Task OnDeviceChangedAsync(string deviceName)
+    {
+        selectedDevice = deviceName;
+        availableDates.Clear();
+        targetDate = null;
+
+        if (string.IsNullOrEmpty(selectedDevice))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            availableDates = await Http.GetFromJsonAsync<List<DateOnly>>($"api/compare/dates?deviceName={Uri.EscapeDataString(selectedDevice)}") ?? new();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"데이터 목록 로드 실패: {ex.Message}");
+        }
+    }
+
+    private void OnDateChanged(DateOnly? date)
+    {
+        targetDate = date;
+        StateHasChanged();
+    }
+}

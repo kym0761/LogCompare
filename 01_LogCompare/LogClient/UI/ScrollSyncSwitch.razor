@@ -1,0 +1,28 @@
+@* 파일명: ScrollSyncSwitch.razor *@
+
+<div class="form-check form-switch mb-0 d-flex align-items-center">
+    @* 스위치 입력부 *@
+    <input class="form-check-input mt-0 sync-switch-input" type="checkbox" id="@Id"
+           checked="@IsSyncEnabled"
+           @onchange="HandleToggle">
+    
+    @* 라벨부 *@
+    <label class="form-check-label small ms-2 sync-switch-label" for="@Id">
+        @Label
+    </label>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = "syncCheck";
+    [Parameter] public string Label { get; set; } = "스크롤 동기화";
+    [Parameter] public bool IsSyncEnabled { get; set; }
+    [Parameter] public EventCallback<bool> IsSyncEnabledChanged { get; set; }
+
+    private async Task HandleToggle(ChangeEventArgs e)
+    {
+        if (e.Value is bool newValue)
+        {
+            await IsSyncEnabledChanged.InvokeAsync(newValue);
+        }
+    }
+}

@@ -1,0 +1,101 @@
+/* 상단바 배경: 테마 변수 적용 */
+.custom-header {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--header-border);
+    padding: 0.75rem 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 로고 스타일링 */
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #0d6efd, #0dcaf0);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.brand-text {
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    color: var(--header-brand-text);
+    transition: color 0.15s ease;
+}
+
+/* 링크 공통 스타일 */
+::deep .custom-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem !important;
+    border-radius: 8px;
+    color: var(--header-text) !important;
+    transition: all 0.2s ease-in-out;
+    font-weight: 500;
+}
+
+::deep .custom-link i {
+    margin-right: 8px;
+    font-size: 1.1rem;
+}
+
+/* 호버 효과: 테마 호버 배경 */
+::deep .custom-link:hover {
+    color: var(--header-text-hover) !important;
+    background-color: var(--bg-card-hover) !important;
+}
+
+/* 활성화(Active) 상태: 파란색 배경 포인트 */
+::deep .custom-link.active {
+    color: #ffffff !important;
+    background-color: #0d6efd !important;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3) !important;
+}
+
+/* 테마 토글 버튼 스타일 */
+.theme-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    transition: all 0.2s ease;
+    color: var(--header-text);
+}
+
+.theme-toggle-btn:hover {
+    background-color: var(--bg-card-hover);
+    color: var(--header-text-hover);
+    border-color: var(--text-secondary);
+}
+
+/* 모바일 토글 버튼 */
+.custom-toggler {
+    border: none;
+    padding: 0.5rem;
+}
+
+    .custom-toggler:focus {
+        box-shadow: none;
+    }
+
+/* 모바일 화면 최적화 */
+@media (max-width: 767.98px) {
+    .navbar-collapse {
+        background-color: var(--header-bg);
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--header-border);
+    }
+
+    .nav-item {
+        margin-bottom: 5px;
+    }
+}

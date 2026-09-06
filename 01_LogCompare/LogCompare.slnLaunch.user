@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "새 프로필",
+    "Projects": [
+      {
+        "Path": "LogAPI\\LogAPI.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "LogClient\\LogClient.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

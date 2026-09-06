@@ -1,0 +1,10 @@
+.sync-switch-input {
+    cursor: pointer;
+}
+
+.sync-switch-label {
+    cursor: pointer;
+    margin-top: 1px;
+    color: var(--text-secondary);
+    transition: color 0.15s ease;
+}

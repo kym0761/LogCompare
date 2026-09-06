@@ -1,0 +1,173 @@
+@page "/log-compare"
+@inject HttpClient Http
+
+@* 1. 최상위 드롭다운 필터 영역 (통제탑) *@
+<LogCompareDropdown DeviceNames="deviceNames"
+                    AvailableDates="availableDates"
+                    AvailableCommands="availableCommands"
+                    SelectedDevice="@selectedDevice"
+                    LeftDate="@leftDate"
+                    RightDate="@rightDate"
+                    SelectedCommand="@selectedCommand"
+                    OnDeviceSelected="OnDeviceChangedAsync"
+                    OnDateSelected="OnDateChangedAsync"
+                    OnCommandSelected="OnCommandChangedAsync" />
+
+@* 2. 자식 컴포넌트 배치 영역 *@
+<div class="row">
+    <div class="col-8">
+        @* Diff 컴포넌트에는 순수하게 텍스트만 넘깁니다 *@
+        <LogDiff LeftContent="@leftContentText" RightContent="@rightContentText" LeftDate="@leftDate" RightDate="@rightDate"></LogDiff>
+    </div>
+
+    <div class="col-4">
+        @* 요약 패널에는 검색 조건만 넘기면 알아서 요약본을 가져옵니다 *@
+        <LogSummaryPanel DeviceName="@selectedDevice" Command="@selectedCommand" RightDate="@rightDate"></LogSummaryPanel>
+    </div>
+</div>
+
+@code {
+    private List<string> deviceNames = new();
+    private List<DateOnly> availableDates = new();
+    private List<string> availableCommands = new();
+
+    private string selectedDevice = "";
+    private DateOnly? leftDate;
+    private DateOnly? rightDate;
+    private string selectedCommand = "";
+
+    // 자식에게 넘겨줄 실제 로그 텍스트
+    private string leftContentText = "";
+    private string rightContentText = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            deviceNames = await Http.GetFromJsonAsync<List<string>>("api/compare/devices") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"장비 목록 로드 실패: {ex.Message}");
+        }
+    }
+
+    private async Task OnDeviceChangedAsync(string deviceName)
+    {
+        selectedDevice = deviceName;
+
+        // 1. 모든 관련 상태 초기화 (이전 장비의 잔상 제거)
+        availableDates.Clear();
+        availableCommands.Clear();
+        leftDate = null;
+        rightDate = null;
+        selectedCommand = "";
+        leftContentText = "";
+        rightContentText = "";
+
+        // 장비 선택이 해제된 경우 UI만 갱신하고 종료
+        if (string.IsNullOrEmpty(selectedDevice))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            // 2. 새로운 장비에 맞는 '목록' 데이터만 로드
+            availableDates = await Http.GetFromJsonAsync<List<DateOnly>>($"api/compare/dates?deviceName={Uri.EscapeDataString(selectedDevice)}") ?? new();
+            await LoadCommandsAsync();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"데이터 목록 로드 실패: {ex.Message}");
+        }
+    }
+
+    private async Task OnCommandChangedAsync(string command)
+    {
+        selectedCommand = command;
+        await FetchLogContentsAsync();
+    }
+
+    // 좌/우 날짜를 동시에 처리하기 위해 튜플(Tuple) 구조를 사용했습니다.
+    private async Task OnDateChangedAsync((DateOnly? date, bool isLeft) args)
+    {
+        if (args.isLeft)
+        {
+            leftDate = args.date;
+        }
+        else
+        {
+            rightDate = args.date;
+        }
+
+        // 날짜가 변경되었으므로 해당 날짜들의 가용한 명령어 목록만 다시 로드합니다.
+        await LoadCommandsAsync();
+        await FetchLogContentsAsync();
+    }
+
+    private async Task LoadCommandsAsync()
+    {
+        if (string.IsNullOrEmpty(selectedDevice))
+        {
+            availableCommands.Clear();
+            return;
+        }
+
+        try
+        {
+            string url = $"api/compare/commands?deviceName={Uri.EscapeDataString(selectedDevice)}";
+            if (leftDate.HasValue)
+            {
+                url += $"&leftDate={leftDate.Value.ToString("yyyy-MM-dd")}";
+            }
+            if (rightDate.HasValue)
+            {
+                url += $"&rightDate={rightDate.Value.ToString("yyyy-MM-dd")}";
+            }
+
+            availableCommands = await Http.GetFromJsonAsync<List<string>>(url) ?? new();
+
+            // 현재 선택된 명령어가 새로 로드된 명령어 목록에 없으면 초기화
+            if (!string.IsNullOrEmpty(selectedCommand) && !availableCommands.Contains(selectedCommand))
+            {
+                selectedCommand = "";
+                leftContentText = "";
+                rightContentText = "";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"명령어 목록 로드 실패: {ex.Message}");
+        }
+    }
+
+    // ⭐️ 부모 페이지에서 텍스트를 조회하여 상태를 업데이트합니다.
+    private async Task FetchLogContentsAsync()
+    {
+        if (string.IsNullOrEmpty(selectedDevice) || leftDate == null || rightDate == null || string.IsNullOrEmpty(selectedCommand))
+        {
+            return;
+        }
+
+        try
+        {
+            Task<string> leftTask = Http.GetStringAsync($"api/compare/content?deviceName={Uri.EscapeDataString(selectedDevice)}&date={leftDate?.ToString("yyyy-MM-dd")}&command={Uri.EscapeDataString(selectedCommand)}");
+            Task<string> rightTask = Http.GetStringAsync($"api/compare/content?deviceName={Uri.EscapeDataString(selectedDevice)}&date={rightDate?.ToString("yyyy-MM-dd")}&command={Uri.EscapeDataString(selectedCommand)}");
+            await Task.WhenAll(leftTask, rightTask);
+            leftContentText = leftTask.Result;
+            rightContentText = rightTask.Result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"로그 데이터 로드 실패: {ex.Message}");
+            leftContentText = "데이터를 불러오는 중 오류가 발생했습니다.";
+            rightContentText = "데이터를 불러오는 중 오류가 발생했습니다.";
+        }
+        
+        StateHasChanged();
+    }
+}

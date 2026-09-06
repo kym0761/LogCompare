@@ -1,0 +1,7 @@
+.diff-wrapper {
+    display: flex;
+    gap: 1px; /* 양쪽 로그 사이의 아주 얇은 구분선 */
+    height: 100%;
+    width: 100%;
+    overflow: hidden; /* 영역 밖으로 나가는 것 차단 */
+}

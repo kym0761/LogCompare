@@ -1,0 +1,142 @@
+@page "/upload"
+@using System.Net
+@inject HttpClient Http
+
+<!-- 추후에 없앨 가능성이 있음. -->
+
+<h3 class="mb-4 fw-bold">로그 파일 업로드</h3>
+
+<div class="card p-4 mb-4" style="background-color: var(--bg-card); border-color: var(--border-color); color: var(--text-primary); transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;">
+    <div class="mb-4">
+        <label class="form-label font-weight-bold" style="color: var(--text-secondary); font-weight: 500; transition: color 0.15s ease;">로그 파일을 선택하세요 (다중 선택 가능)</label>
+        <InputFile OnChange="OnInputFileChange" class="form-control" style="background-color: var(--bg-primary); color: var(--text-primary); border-color: var(--border-color); transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;" multiple />
+    </div>
+
+    @if (fileStatuses.Any())
+    {
+        <div class="table-responsive border rounded mb-4 overflow-hidden" style="border-color: var(--border-color) !important; transition: border-color 0.15s ease;">
+            <table class="table table-hover mb-0" style="--bs-table-bg: var(--table-bg); --bs-table-color: var(--text-primary); --bs-table-hover-color: var(--text-primary); --bs-table-border-color: var(--border-color); --bs-table-hover-bg: var(--bg-card-hover); transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;">
+                <thead>
+                    <tr style="background-color: var(--table-header-bg); color: var(--text-secondary); transition: background-color 0.15s ease, color 0.15s ease;">
+                        <th class="px-3 py-2 border-0">파일명</th>
+                        <th class="px-3 py-2 border-0">용량</th>
+                        <th class="px-3 py-2 border-0">상태</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in fileStatuses)
+                    {
+                        <tr style="border-bottom: 1px solid var(--border-color); transition: border-color 0.15s ease;">
+                            <td class="px-3 py-3 align-middle fw-medium">@item.Key.Name</td>
+                            <td class="px-3 py-3 align-middle text-secondary">@(item.Key.Size / 1024) KB</td>
+                            <td class="px-3 py-3 align-middle">
+                                <span class="badge @GetBadgeClass(item.Value) px-2 py-1.5 rounded">
+                                    @item.Value
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 fw-bold" @onclick="UploadFilesAsync" disabled="@isUploading">
+            @(isUploading ? "업로드 중..." : "전체 업로드 시작")
+        </button>
+    }
+</div>
+
+@code {
+    // 파일별 상태를 추적하기 위한 딕셔너리
+    private Dictionary<IBrowserFile, string> fileStatuses = new();
+    private bool isUploading = false;
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        fileStatuses.Clear();
+        // 2. 여러 파일을 가져와서 초기 상태를 "대기 중"으로 설정
+        foreach (IBrowserFile file in e.GetMultipleFiles(50))
+        {
+            fileStatuses.Add(file, "대기 중");
+        }
+    }
+
+    private async Task UploadFilesAsync()
+    {
+        isUploading = true;
+
+        foreach (IBrowserFile file in fileStatuses.Keys.ToList())
+        {
+            fileStatuses[file] = "업로드 중...";
+            StateHasChanged(); // 화면 갱신
+
+            await UploadSingleFileAsync(file);
+        }
+
+        isUploading = false;
+    }
+
+    private async Task UploadSingleFileAsync(IBrowserFile file)
+    {
+        try
+        {
+            using MultipartFormDataContent content = new MultipartFormDataContent();
+            Stream fileStream = file.OpenReadStream(maxAllowedSize: 1024 * 1024 * 10);
+            StreamContent streamContent = new StreamContent(fileStream);
+
+            string fileName = file.Name;
+            System.Net.Http.Headers.ContentDispositionHeaderValue contentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data")
+            {
+                Name = "\"file\"",
+                FileName = $"\"{fileName}\"" // 파일명을 큰따옴표로 감싸서 공백/특수문자 보호
+            };
+            streamContent.Headers.ContentDisposition = contentDisposition;
+        
+            content.Add(streamContent); // 세 번째 인자(file.Name)를 넣지 않음
+
+            HttpResponseMessage response = await Http.PostAsync("api/logs/upload", content);
+
+            // 3. 서버 응답 코드에 따라 상태 업데이트
+            if (response.IsSuccessStatusCode)
+            {
+                fileStatuses[file] = "✅ 성공";
+            }
+            else if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                fileStatuses[file] = $"⚠️ 중복됨 - {response.ReasonPhrase}";
+            }
+            else
+            {
+                fileStatuses[file] = $"❌ 에러 ({response.StatusCode}) - {response.ReasonPhrase}";
+            }
+        }
+        catch (Exception ex)
+        {
+            fileStatuses[file] = $"❌ 실패: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    // 부트스트랩 배지 색상 결정 (Subtle 버전)
+    private string GetBadgeClass(string status)
+    {
+        if (status.StartsWith("✅"))
+        {
+            return "bg-success-subtle text-success border border-success-subtle";
+        }
+        if (status.StartsWith("⚠️"))
+        {
+            return "bg-warning-subtle text-warning border border-warning-subtle";
+        }
+        if (status.StartsWith("❌"))
+        {
+            return "bg-danger-subtle text-danger border border-danger-subtle";
+        }
+        if (status.Contains("중..."))
+        {
+            return "bg-info-subtle text-info border border-info-subtle";
+        }
+        return "bg-secondary-subtle text-secondary border border-secondary-subtle";
+    }
+}

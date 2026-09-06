@@ -1,0 +1,90 @@
+@using DiffPlex.DiffBuilder
+@using DiffPlex.DiffBuilder.Model
+@inject IJSRuntime JS
+
+<div class="custom-panel">
+    @* 수정된 툴바: 이제 custom-panel-header로 통합하여 높이를 동일하게 맞춤 *@
+    <div class="custom-panel-header">
+        <div class="d-flex align-items-center gap-3">
+            <DifferenceBadge IsLoaded="IsLoaded" HasDifferences="HasDifferences" />
+            <FontSizeSelector @bind-FontSize="fontSize" />
+        </div>
+        <ScrollSyncSwitch IsSyncEnabled="isSyncEnabled" IsSyncEnabledChanged="OnSyncToggled" />
+    </div>
+
+    @* 로그 비교 출력 영역: LogColumn 2개를 배치 *@
+    <div class="custom-panel-body">
+        <div class="diff-wrapper">
+            @* 왼쪽 컬럼 *@
+            <LogColumn Id="leftScroll" Title="LEFT" TargetDate="LeftDate" Lines="DiffModel.OldText.Lines" FontSize="fontSize" />
+
+            @* 오른쪽 컬럼 *@
+            <LogColumn Id="rightScroll" Title="RIGHT" TargetDate="RightDate" Lines="DiffModel.NewText.Lines" FontSize="fontSize" />
+        </div>
+    </div>
+</div>
+
+@code {
+    // ⭐️ 부모로부터 주입받을 파라미터들
+    [Parameter] public string LeftContent { get; set; } = "";
+    [Parameter] public string RightContent { get; set; } = "";
+    [Parameter] public DateOnly? LeftDate { get; set; }
+    [Parameter] public DateOnly? RightDate { get; set; }
+
+    private int fontSize = 13;
+
+    private SideBySideDiffModel DiffModel { get; set; } = new();
+
+    private bool _isDataChanged = false;
+
+    // 파라미터(텍스트)가 바뀔 때마다 Diff 모델을 다시 만듭니다.
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(LeftContent) || !string.IsNullOrEmpty(RightContent))
+        {
+            var builder = new SideBySideDiffBuilder(new DiffPlex.Differ());
+            DiffModel = builder.BuildDiffModel(LeftContent ?? "", RightContent ?? "");
+            _isDataChanged = true;
+        }
+        else
+        {
+            // 내용이 모두 비어있다면 DiffModel도 초기화하여
+            // 자식 컴포넌트(LogColumn)들이 빈 화면을 그리게 합니다.
+            DiffModel = new SideBySideDiffModel();
+            _isDataChanged = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || _isDataChanged)
+        {
+            _isDataChanged = false;
+            await Task.Delay(100); //DiffBadge가 순간적으로 왼쪽/오른쪽 로그가 잠시 다른게 출력될 때 바뀌는 것을 방지하기 위해 delay
+            await ApplySync();
+        }
+    }
+
+    #region ScrollSync
+    private bool isSyncEnabled = true;
+
+    private async Task OnSyncToggled(bool newValue)
+    {
+        isSyncEnabled = newValue; // 상태 업데이트
+        await ApplySync(); // JS 동기화 로직 호출
+    }
+
+    private async Task ApplySync()
+    {
+        await JS.InvokeVoidAsync("chatHelpers.syncScroll", "leftScroll", "rightScroll", isSyncEnabled);
+    }
+    #endregion
+
+    #region diffBadge
+    private bool HasDifferences =>
+        DiffModel.OldText.Lines.Any(l => l.Type != ChangeType.Unchanged && l.Type != ChangeType.Imaginary) ||
+        DiffModel.NewText.Lines.Any(l => l.Type != ChangeType.Unchanged && l.Type != ChangeType.Imaginary);
+
+    private bool IsLoaded => DiffModel.OldText.Lines.Any() || DiffModel.NewText.Lines.Any();
+    #endregion
+}

@@ -1,0 +1,29 @@
+@if (IsLoaded)
+{
+    @if (HasDifferences)
+    {
+        <!-- 주황색 경고 -->
+        <div class="badge bg-danger d-flex align-items-center p-2 shadow-sm" title="차이점이 발견되었습니다.">
+            <span class="spinner-grow spinner-grow-sm me-2" role="status"></span>
+            <span>Diff Detected</span>
+        </div>
+    }
+    else
+    {
+        <!-- 초록색 Normal 상태 -->
+        <div class="badge bg-success d-flex align-items-center p-2 shadow-sm" title="두 로그가 완벽히 일치합니다.">
+            <span>Perfect Match</span>
+        </div>
+    }
+}
+else
+{
+    <div class="badge bg-secondary d-flex align-items-center p-2 shadow-sm badge-standby" title="로그 데이터를 기다리는 중입니다.">
+        <span>Standby</span>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsLoaded { get; set; }
+    [Parameter] public bool HasDifferences { get; set; }
+}

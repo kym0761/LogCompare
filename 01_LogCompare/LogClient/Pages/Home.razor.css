@@ -1,0 +1,92 @@
+/* Dashboard container padding */
+.dashboard-container {
+    padding: 3rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Gradient text effect */
+.gradient-text {
+    background: linear-gradient(135deg, #58a6ff 0%, #0dcaf0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+}
+
+/* Link wrapper style to remove underlines */
+.feature-card-link {
+    text-decoration: none !important;
+}
+
+/* Feature cards */
+.feature-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Card hover animation */
+.feature-card:hover {
+    transform: translateY(-8px);
+    border-color: #58a6ff;
+    box-shadow: 0 12px 24px rgba(88, 166, 255, 0.12);
+    background-color: var(--bg-card-hover);
+}
+
+/* Card Icons */
+.card-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.compare-icon {
+    background: linear-gradient(135deg, #388bfd 0%, #0d6efd 100%);
+}
+
+.view-icon {
+    background: linear-gradient(135deg, #bc8cff 0%, #8957e5 100%);
+}
+
+.upload-icon {
+    background: linear-gradient(135deg, #39d353 0%, #238636 100%);
+}
+
+/* Footer Action within cards */
+.card-footer-action {
+    transition: transform 0.2s ease;
+}
+
+.feature-card:hover .card-footer-action {
+    transform: translateX(4px);
+}
+
+.card-footer-action i {
+    font-size: 1.1rem;
+}
+
+/* Warning alert banner */
+.warning-banner {
+    background-color: rgba(240, 136, 62, 0.08);
+    border: 1px solid rgba(240, 136, 62, 0.2);
+    border-left: 4px solid #f0883e;
+    border-radius: 8px;
+}
+
+.warning-icon-wrapper {
+    background: rgba(240, 136, 62, 0.1);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
